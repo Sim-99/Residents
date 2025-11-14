@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thandolwethu Property - Premium Student Accommodation</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Load Leaflet for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        :root {
+            --primary: #3b82f6;
+            --secondary: #10b981;
+            --accent: #f59e0b;
+            --dark: #1f2937;
+            --light: #f8fafc;
+            scroll-behavior: smooth;
+        }
+
+        [data-theme="dark"] {
+            --primary: #60a5fa;
+            --secondary: #34d399;
+            --accent: #fbbf24;
+            --dark: #f9fafb;
+            --light: #111827;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--light);
+            color: var(--dark);
+            transition: all 0.3s ease;
+        }
+
+        .theme-transition * {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--primary);
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .parallax {
+            background-attachment: fixed;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+
+        @keyframes floating {
+            0% { transform: translate(0, 0px); }
+            50% { transform: translate(0, -15px); }
+            100% { transform: translate(0, 0px); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        /* Modal animation */
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        .modal-enter-active {
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        .modal-exit {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .modal-exit-active {
+            opacity: 0;
+            transform: scale(0.9);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        /* Image gallery */
+        .gallery-item {
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.75rem;
+        }
+        .gallery-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            color: white;
+            padding: 1.5rem;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+        .gallery-item:hover .gallery-overlay {
+            transform: translateY(0);
+        }
+
+        /* Application form styles */
+        .form-step {
+            display: none;
+        }
+        .form-step.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .progress-bar {
+            height: 6px;
+            background-color: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: var(--secondary);
+            transition: width 0.5s ease;
+        }
+
+        /* Map container */
+        #map {
+            height: 100%;
+            width: 100%;
+            border-radius: 0.75rem;
+            z-index: 1;
+        }
+
+        /* Dark mode specific styles */
+        [data-theme="dark"] .bg-white {
+            background-color: #1f2937;
+        }
+        [data-theme="dark"] .bg-gray-100 {
+            background-color: #111827;
+        }
+        [data-theme="dark"] .bg-gray-50 {
+            background-color: #374151;
+        }
+        [data-theme="dark"] .text-gray-600,
+        [data-theme="dark"] .text-gray-500,
+        [data-theme="dark"] .text-gray-700 {
+            color: #d1d5db;
+        }
+        [data-theme="dark"] .shadow-lg,
+        [data-theme="dark"] .shadow-xl {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Ensure good contrast in both modes */
+        .text-high-contrast {
+            color: var(--dark);
+        }
+        [data-theme="dark"] .text-high-contrast {
+            color: var(--light);
+        }
+
+        .bg-high-contrast {
+            background-color: var(--light);
+        }
+        [data-theme="dark"] .bg-high-contrast {
+            background-color: var(--dark);
+        }
+
+        /* WhatsApp button */
+        .whatsapp-float {
+            position: fixed;
+            width: 60px;
+            height: 60px;
+            bottom: 40px;
+            left: 40px;
+            background-color: #25d366;
+            color: #FFF;
+            border-radius: 50px;
+            text-align: center;
+            font-size: 30px;
+            box-shadow: 2px 2px 3px rgba(0,0,0,0.2);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        .whatsapp-float:hover {
+            transform: scale(1.1);
+            background-color: #128C7E;
+        }
+    </style>
+</head>
+<body class="theme-transition">
+    <!-- WhatsApp Float Button -->
+    <a href="https://wa.me/27665543210?text=Hi%20Thandolwethu%20Property,%20I'm%20interested%20in%20your%20student%20accommodation" class="whatsapp-float" target="_blank">
+        <i data-lucide="message-circle" class="w-7 h-7"></i>
+    </a>
+
+    <!-- Theme Toggle Button -->
+    <button id="theme-toggle" class="fixed top-24 right-4 z-50 p-3 rounded-full bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-all duration-300">
+        <i id="theme-icon" data-lucide="sun" class="w-5 h-5 text-yellow-500"></i>
+    </button>
+
+    <!-- Navigation Bar -->
+    <header class="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-lg transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo/Property Name -->
+                <a href="#" class="text-2xl font-extrabold text-primary dark:text-white tracking-tight flex items-center">
+                    <i data-lucide="home" class="w-6 h-6 inline-block mr-2 text-secondary"></i>Thandolwethu
+                </a>
+
+                <!-- Desktop Menu -->
+                <nav class="hidden md:flex space-x-6">
+                    <a href="#accommodation" class="nav-link text-gray-600 dark:text-gray-300 hover:text-primary px-3 py-2 rounded-lg font-medium transition duration-150 ease-in-out">Accommodation</a>
+                    <a href="#lease" class="nav-link text-gray-600 dark:text-gray-300 hover:text-primary px-3 py-2 rounded-lg font-medium transition duration-150 ease-in-out">Lease Details</a>
+                    <a href="#location" class="nav-link text-gray-600 dark:text-gray-300 hover:text-primary px-3 py-2 rounded-lg font-medium transition duration-150 ease-in-out">Location</a>
+                </nav>
+
+                <!-- CTA Buttons -->
+                <div class="flex items-center space-x-4">
+                    <button onclick="toggleModal('application-modal')" class="hidden md:inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-md text-white bg-secondary hover:bg-emerald-600 transition duration-300 transform hover:scale-105 pulse">
+                        Apply Now
+                    </button>
+                    <a href="https://wa.me/27665543210?text=Hi%20Thandolwethu%20Property,%20I'm%20interested%20in%20your%20student%20accommodation" target="_blank" class="hidden md:inline-flex items-center justify-center px-4 py-2 border border-green-500 text-sm font-medium rounded-full text-green-600 dark:text-green-400 bg-white dark:bg-gray-700 hover:bg-green-50 dark:hover:bg-gray-600 transition duration-300">
+                        <i data-lucide="message-circle" class="w-4 h-4 mr-2"></i> WhatsApp
+                    </a>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <button id="menu-button" class="md:hidden text-gray-600 dark:text-gray-300 hover:text-primary p-2 rounded-md" onclick="toggleMobileMenu()">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Menu (Hidden by default) -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 transition-all duration-300">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#accommodation" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onclick="toggleMobileMenu()">Accommodation</a>
+                <a href="#lease" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onclick="toggleMobileMenu()">Lease Details</a>
+                <a href="#location" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" onclick="toggleMobileMenu()">Location</a>
+                <button onclick="toggleModal('application-modal')" class="w-full text-left px-3 py-2 mt-2 rounded-full text-base font-medium text-white bg-secondary hover:bg-emerald-600 transition duration-300">
+                    Apply Now
+                </button>
+                <a href="https://wa.me/27665543210?text=Hi%20Thandolwethu%20Property,%20I'm%20interested%20in%20your%20student%20accommodation" target="_blank" class="block w-full text-left px-3 py-2 mt-2 rounded-full text-base font-medium text-green-600 dark:text-green-400 border border-green-500 hover:bg-green-50 dark:hover:bg-gray-700 transition duration-300">
+                    WhatsApp
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="relative bg-gradient-to-r from-primary to-blue-700 dark:from-blue-900 dark:to-indigo-900 overflow-hidden py-24 sm:py-32">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+            <span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-800 px-3 py-0.5 text-sm font-medium text-blue-800 dark:text-blue-200 floating">NSFAS Accredited Accommodation</span>
+            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mt-4 fade-in">
+                Your Home Base for CPUT & UWC Success
+            </h1>
+            <p class="mt-4 max-w-2xl mx-auto text-xl text-blue-100 dark:text-blue-300 fade-in">
+                Thandolwethu Property offers safe, affordable, and conveniently located student residence at <strong>14 Hoffman St Lot 6 Bellville South, 7530</strong>.
+            </p>
+            <div class="mt-8 flex justify-center space-x-4 fade-in">
+                <a href="#accommodation" class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-lg text-primary bg-white hover:bg-gray-100 transition duration-300 transform hover:scale-105">
+                    See Photos
+                </a>
+                <button onclick="toggleModal('application-modal')" class="inline-flex items-center justify-center px-6 py-3 border-2 border-white text-base font-medium rounded-full text-white hover:bg-white hover:text-primary transition duration-300 transform hover:scale-105">
+                    Apply Now
+                </button>
+            </div>
+        </div>
+        <!-- Animated background elements -->
+        <div class="absolute inset-0 opacity-10">
+            <div class="absolute top-1/4 left-1/4 w-64 h-64 bg-white rounded-full mix-blend-overlay filter blur-xl opacity-20 animate-pulse"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-64 h-64 bg-blue-300 rounded-full mix-blend-overlay filter blur-xl opacity-20 animate-pulse animation-delay-2000"></div>
+        </div>
+    </section>
+
+    <!-- Features Section / Proximity -->
+    <section class="py-16 sm:py-24 bg-white dark:bg-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="lg:text-center fade-in">
+                <h2 class="text-base text-secondary font-semibold tracking-wide uppercase">Student-Focused Living</h2>
+                <p class="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-high-contrast sm:text-4xl">
+                    Perfectly Situated for CPUT & UWC
+                </p>
+            </div>
+
+            <div class="mt-16">
+                <dl class="space-y-10 md:space-y-0 md:grid md:grid-cols-3 md:gap-x-8 md:gap-y-10">
+                    <div class="relative flex flex-col items-center text-center p-6 bg-gray-50 dark:bg-gray-700 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 fade-in">
+                        <i data-lucide="bus" class="w-12 h-12 text-primary p-2 bg-blue-100 dark:bg-blue-900 rounded-full"></i>
+                        <dt class="mt-4 text-lg leading-6 font-medium text-high-contrast">Easy Commute</dt>
+                        <dd class="mt-2 text-base text-gray-600 dark:text-gray-400">
+                            Quick access to public transport routes servicing both CPUT (Cape Town Campus and Bellville) and UWC campuses.
+                        </dd>
+                    </div>
+
+                    <div class="relative flex flex-col items-center text-center p-6 bg-gray-50 dark:bg-gray-700 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 fade-in">
+                        <i data-lucide="lock" class="w-12 h-12 text-primary p-2 bg-blue-100 dark:bg-blue-900 rounded-full"></i>
+                        <dt class="mt-4 text-lg leading-6 font-medium text-high-contrast">Safety First</dt>
+                        <dd class="mt-2 text-base text-gray-600 dark:text-gray-400">
+                            24/7 security features, secure access control, and a focus on creating a safe environment for all residents.
+                        </dd>
+                    </div>
+
+                    <div class="relative flex flex-col items-center text-center p-6 bg-gray-50 dark:bg-gray-700 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 fade-in">
+                        <i data-lucide="wifi" class="w-12 h-12 text-primary p-2 bg-blue-100 dark:bg-blue-900 rounded-full"></i>
+                        <dt class="mt-4 text-lg leading-6 font-medium text-high-contrast">Unlimited WiFi</dt>
+                        <dd class="mt-2 text-base text-gray-600 dark:text-gray-400">
+                            High-speed internet access included to support all your research, assignments, and entertainment needs.
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    </section>
+
+    <!-- Accommodation Pictures Section -->
+    <section id="accommodation" class="py-16 sm:py-24 bg-gray-100 dark:bg-gray-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-extrabold text-high-contrast text-center fade-in">Accommodation Gallery</h2>
+            <p class="mt-3 max-w-2xl mx-auto text-center text-xl text-gray-600 dark:text-gray-400 fade-in">
+                See the comfortable, shared, and private spaces available at Thandolwethu Property.
+            </p>
+
+            <div class="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Image 1 -->
+                <div class="gallery-item rounded-xl shadow-xl overflow-hidden group fade-in">
+                    <img src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" 
+                         alt="Modern student study area with desks and chairs" 
+                         class="w-full h-64 object-cover transform group-hover:scale-110 transition duration-700"
+                    >
+                    <div class="gallery-overlay">
+                        <p class="text-lg font-semibold">Modern Study Areas</p>
+                        <p class="text-sm">Dedicated spaces for focused work.</p>
+                    </div>
+                </div>
+
+                <!-- Image 2 -->
+                <div class="gallery-item rounded-xl shadow-xl overflow-hidden group fade-in">
+                    <img src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" 
+                         alt="Fully equipped communal kitchen" 
+                         class="w-full h-64 object-cover transform group-hover:scale-110 transition duration-700"
+                    >
+                    <div class="gallery-overlay">
+                        <p class="text-lg font-semibold">Fully Equipped Kitchen</p>
+                        <p class="text-sm">Space for meal prep and storage.</p>
+                    </div>
+                </div>
+
+                <!-- Image 3 -->
+                <div class="gallery-item rounded-xl shadow-xl overflow-hidden group fade-in">
+                    <img src="https://images.unsplash.com/photo-1560185893-a55cbc8c57e8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" 
+                         alt="Comfortable student bedroom" 
+                         class="w-full h-64 object-cover transform group-hover:scale-110 transition duration-700"
+                    >
+                    <div class="gallery-overlay">
+                        <p class="text-lg font-semibold">Comfortable Bedrooms</p>
+                        <p class="text-sm">Single and sharing options available.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Image 4 -->
+                <div class="gallery-item rounded-xl shadow-xl overflow-hidden group fade-in">
+                    <img src="https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" 
+                         alt="Clean and modern bathroom" 
+                         class="w-full h-64 object-cover transform group-hover:scale-110 transition duration-700"
+                    >
+                    <div class="gallery-overlay">
+                        <p class="text-lg font-semibold">Modern Bathrooms</p>
+                        <p class="text-sm">Clean and well-maintained facilities.</p>
+                    </div>
+                </div>
+
+                <!-- Image 5 -->
+                <div class="gallery-item rounded-xl shadow-xl overflow-hidden group fade-in">
+                    <img src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" 
+                         alt="Common area for socializing" 
+                         class="w-full h-64 object-cover transform group-hover:scale-110 transition duration-700"
+                    >
+                    <div class="gallery-overlay">
+                        <p class="text-lg font-semibold">Common Areas</p>
+                        <p class="text-sm">Spaces to relax and socialize.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Lease Agreement Section -->
+    <section id="lease" class="py-16 sm:py-24 bg-white dark:bg-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-center">
+                <div class="fade-in">
+                    <h2 class="text-3xl font-extrabold text-high-contrast sm:text-4xl">
+                        Lease Agreement & Terms
+                    </h2>
+                    <p class="mt-4 text-lg text-gray-600 dark:text-gray-400">
+                        Transparency is key. Here are the core details of the Thandolwethu Property lease agreement for the academic year. All leases are subject to NSFAS guidelines (where applicable).
+                    </p>
+
+                    <ul class="mt-6 space-y-4">
+                        <li class="flex items-start fade-in">
+                            <i data-lucide="check-circle" class="flex-shrink-0 w-6 h-6 text-secondary mr-3 mt-1"></i>
+                            <p class="text-base text-gray-700 dark:text-gray-300">
+                                <strong>Duration:</strong> 10-month fixed-term contract (February to November).
+                            </p>
+                        </li>
+                        <li class="flex items-start fade-in">
+                            <i data-lucide="check-circle" class="flex-shrink-0 w-6 h-6 text-secondary mr-3 mt-1"></i>
+                            <p class="text-base text-gray-700 dark:text-gray-300">
+                                <strong>Deposit:</strong> No deposit required for NSFAS-approved students.
+                            </p>
+                        </li>
+                        <li class="flex items-start fade-in">
+                            <i data-lucide="check-circle" class="flex-shrink-0 w-6 h-6 text-secondary mr-3 mt-1"></i>
+                            <p class="text-base text-gray-700 dark:text-gray-300">
+                                <strong>Inclusions:</strong> Rent covers electricity, water, and unlimited high-speed WiFi.
+                            </p>
+                        </li>
+                        <li class="flex items-start fade-in">
+                            <i data-lucide="check-circle" class="flex-shrink-0 w-6 h-6 text-secondary mr-3 mt-1"></i>
+                            <p class="text-base text-gray-700 dark:text-gray-300">
+                                <strong>Payment:</strong> Monthly rental payments aligned with NSFAS disbursement schedule.
+                            </p>
+                        </li>
+                    </ul>
+                </div>
+                <div class="mt-10 lg:mt-0 p-8 bg-gray-50 dark:bg-gray-700 rounded-xl shadow-xl fade-in">
+                    <h3 class="text-2xl font-bold text-high-contrast mb-4">Ready to Apply?</h3>
+                    <p class="text-gray-600 dark:text-gray-300 mb-6">
+                        Complete our online application form to secure your spot at Thandolwethu Property for the upcoming academic year.
+                    </p>
+                    
+                    <button onclick="toggleModal('application-modal')" class="w-full inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-lg text-white bg-secondary hover:bg-emerald-600 transition duration-300 transform hover:scale-105">
+                        <i data-lucide="edit" class="w-5 h-5 mr-2"></i>Start Application
+                    </button>
+                    
+                    <p class="mt-4 text-sm text-gray-600 dark:text-gray-400 text-center">
+                        Applications are processed on a first-come, first-served basis.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Location & Contact Section -->
+    <section id="location" class="py-16 sm:py-24 bg-gray-100 dark:bg-gray-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-extrabold text-high-contrast text-center fade-in">Find Us in Bellville South</h2>
+            <p class="mt-3 max-w-2xl mx-auto text-center text-xl text-gray-600 dark:text-gray-400 fade-in">
+                Thandolwethu Property is conveniently located for students attending institutions in the Bellville/Tygerberg area.
+            </p>
+
+            <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Location Details -->
+                <div class="p-6 bg-white dark:bg-gray-800 rounded-xl shadow-xl flex flex-col justify-center fade-in">
+                    <h3 class="text-xl font-bold text-primary mb-3">Our Address</h3>
+                    <p class="text-lg text-high-contrast font-medium">14 Hoffman St Lot 6</p>
+                    <p class="text-lg text-high-contrast font-medium">Bellville South, 7530</p>
+                    
+                    <h3 class="text-xl font-bold text-primary mt-6 mb-3">Contact Information</h3>
+                    <div class="space-y-2">
+                        <p class="flex items-center text-gray-700 dark:text-gray-300">
+                            <i data-lucide="phone" class="w-5 h-5 text-secondary mr-3"></i>
+                            (021) 555-8426 (THANDO)
+                        </p>
+                        <p class="flex items-center text-gray-700 dark:text-gray-300">
+                            <i data-lucide="mail" class="w-5 h-5 text-secondary mr-3"></i>
+                            info@thandolwethu.co.za
+                        </p>
+                        <p class="flex items-center text-gray-700 dark:text-gray-300">
+                            <i data-lucide="message-circle" class="w-5 h-5 text-green-500 mr-3"></i>
+                            +27 66 554 3210 (WhatsApp)
+                        </p>
+                    </div>
+                    
+                    <div class="mt-8 flex space-x-4">
+                        <button onclick="toggleModal('inquiry-modal')" class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-lg text-white bg-primary hover:bg-blue-700 transition duration-300 transform hover:scale-105">
+                            Submit Inquiry
+                        </button>
+                        <a href="https://wa.me/27665543210?text=Hi%20Thandolwethu%20Property,%20I'm%20interested%20in%20your%20student%20accommodation" target="_blank" class="inline-flex items-center justify-center px-6 py-3 border border-green-500 text-base font-medium rounded-full text-green-600 dark:text-green-400 bg-white dark:bg-gray-700 hover:bg-green-50 dark:hover:bg-gray-600 transition duration-300 transform hover:scale-105">
+                            <i data-lucide="message-circle" class="w-5 h-5 mr-2"></i> WhatsApp
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Interactive Map -->
+                <div class="rounded-xl shadow-xl overflow-hidden h-96 fade-in">
+                    <div id="map"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark dark:bg-gray-900 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="flex justify-center space-x-6">
+                <!-- Social Icons -->
+                <a href="#" class="text-gray-400 hover:text-white transition transform hover:scale-110"><i data-lucide="instagram" class="w-6 h-6"></i></a>
+                <a href="#" class="text-gray-400 hover:text-white transition transform hover:scale-110"><i data-lucide="facebook" class="w-6 h-6"></i></a>
+                <a href="https://wa.me/27665543210?text=Hi%20Thandolwethu%20Property,%20I'm%20interested%20in%20your%20student%20accommodation" target="_blank" class="text-gray-400 hover:text-green-400 transition transform hover:scale-110"><i data-lucide="message-circle" class="w-6 h-6"></i></a>
+            </div>
+            <p class="mt-6 text-sm text-gray-400">
+                &copy; 2025 Thandolwethu Property. Managed by Landlord Name (Pty) Ltd. | All Rights Reserved.
+            </p>
+            <p class="mt-1 text-xs text-gray-500">
+                Dedicated accommodation for CPUT & UWC students.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Application Modal -->
+    <div id="application-modal" class="fixed inset-0 z-[9999] hidden opacity-0 transition-opacity duration-300 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white dark:bg-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700 rounded-t-xl">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-2xl font-bold text-high-contrast">Application Form</h3>
+                    <button onclick="toggleModal('application-modal')" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+                <div class="mt-4">
+                    <div class="progress-bar">
+                        <div id="progress-fill" class="progress-fill" style="width: 25%"></div>
+                    </div>
+                    <div class="flex justify-between mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        <span id="step-indicator">Step 1 of 4</span>
+                        <span id="application-type">Student Application</span>
+                    </div>
+                </div>
+            </div>
+            
+            <form id="application-form" class="p-6">
+                <!-- Step 1: Personal Information -->
+                <div id="step-1" class="form-step active">
+                    <h4 class="text-lg font-semibold text-high-contrast mb-4">Personal Information</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="first-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name *</label>
+                            <input type="text" id="first-name" name="first-name" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                        </div>
+                        <div>
+                            <label for="last-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name *</label>
+                            <input type="text" id="last-name" name="last-name" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                        </div>
+                        <div>
+                            <label for="id-number" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID Number *</label>
+                            <input type="text" id="id-number" name="id-number" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                        </div>
+                        <div>
+                            <label for="date-of-birth" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date of Birth *</label>
+                            <input type="date" id="date-of-birth" name="date-of-birth" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="address" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Home Address *</label>
+                            <textarea id="address" name="address" rows="2" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-between mt-6">
+                        <div></div> <!-- Empty div for spacing -->
+                        <button type="button" onclick="nextStep(2)" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-md text-white bg-primary hover:bg-blue-700 transition duration-300">
+                            Next <i data-lucide="arrow-right" class="w-4 h-4 ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Contact Information -->
+                <div id="step-2" class="form-step">
+                    <h4 class="text-lg font-semibold text-high-contrast mb-4">Contact Information</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address *</label>
+                            <input type="email" id="email" name="email" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                        </div>
+                        <div>
+                            <label for="phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number *</label>
+                            <input type="tel" id="phone" name="phone" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="emergency-contact" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Emergency Contact (Name & Number) *</label>
+                            <input type="text" id="emergency-contact" name="emergency-contact" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                        </div>
+                    </div>
+                    <div class="flex justify-between mt-6">
+                        <button type="button" onclick="prevStep(1)" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-full text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition duration-300">
+                            <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i> Back
+                        </button>
+                        <button type="button" onclick="nextStep(3)" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-md text-white bg-primary hover:bg-blue-700 transition duration-300">
+                            Next <i data-lucide="arrow-right" class="w-4 h-4 ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Academic Information -->
+                <div id="step-3" class="form-step">
+                    <h4 class="text-lg font-semibold text-high-contrast mb-4">Academic Information</h4>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label for="institution" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Institution *</label>
+                            <select id="institution" name="institution" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                                <option value="">Select your institution</option>
+                                <option value="CPUT">Cape Peninsula University of Technology (CPUT)</option>
+                                <option value="UWC">University of the Western Cape (UWC)</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="course" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course/Program *</label>
+                            <input type="text" id="course" name="course" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                        </div>
+                        <div>
+                            <label for="year-of-study" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year of Study *</label>
+                            <select id="year-of-study" name="year-of-study" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                                <option value="">Select year</option>
+                                <option value="1">1st Year</option>
+                                <option value="2">2nd Year</option>
+                                <option value="3">3rd Year</option>
+                                <option value="4">4th Year</option>
+                                <option value="Postgrad">Postgraduate</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="student-number" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Student Number</label>
+                            <input type="text" id="student-number" name="student-number" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="nsfas-funded" name="nsfas-funded" class="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded">
+                            <label for="nsfas-funded" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">I am funded by NSFAS</label>
+                        </div>
+                    </div>
+                    <div class="flex justify-between mt-6">
+                        <button type="button" onclick="prevStep(2)" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-full text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition duration-300">
+                            <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i> Back
+                        </button>
+                        <button type="button" onclick="nextStep(4)" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-md text-white bg-primary hover:bg-blue-700 transition duration-300">
+                            Next <i data-lucide="arrow-right" class="w-4 h-4 ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 4: Accommodation Preferences & Submit -->
+                <div id="step-4" class="form-step">
+                    <h4 class="text-lg font-semibold text-high-contrast mb-4">Accommodation Preferences</h4>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label for="room-type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Preferred Room Type *</label>
+                            <select id="room-type" name="room-type" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                                <option value="">Select room type</option>
+                                <option value="single">Single Room</option>
+                                <option value="sharing">Sharing Room (2 people)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="move-in-date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Preferred Move-in Date *</label>
+                            <input type="date" id="move-in-date" name="move-in-date" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                        </div>
+                        <div>
+                            <label for="special-requirements" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Special Requirements</label>
+                            <textarea id="special-requirements" name="special-requirements" rows="3" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast" placeholder="Any allergies, medical conditions, or other requirements we should know about?"></textarea>
+                        </div>
+                        <div class="flex items-start mt-2">
+                            <input type="checkbox" id="agree-terms" name="agree-terms" required class="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded mt-1">
+                            <label for="agree-terms" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                                I agree to the <a href="#" class="text-primary hover:underline">terms and conditions</a> and understand that this is a 10-month lease agreement from February to November with no deposit required for NSFAS students.
+                            </label>
+                        </div>
+                    </div>
+                    <div class="flex justify-between mt-6">
+                        <button type="button" onclick="prevStep(3)" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-full text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition duration-300">
+                            <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i> Back
+                        </button>
+                        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-md text-white bg-secondary hover:bg-emerald-600 transition duration-300">
+                            Submit Application <i data-lucide="send" class="w-4 h-4 ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Inquiry Modal (Hidden by default) -->
+    <div id="inquiry-modal" class="fixed inset-0 z-[9999] hidden opacity-0 transition-opacity duration-300 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg p-6 sm:p-8 transform transition-transform duration-300 scale-95">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-high-contrast">Inquiry Form</h3>
+                <button onclick="toggleModal('inquiry-modal')" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <form id="inquiry-form" class="space-y-4">
+                <div>
+                    <label for="inquiry-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+                    <input type="text" id="inquiry-name" name="name" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                </div>
+                <div>
+                    <label for="inquiry-email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                    <input type="email" id="inquiry-email" name="email" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                </div>
+                <div>
+                    <label for="inquiry-phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
+                    <input type="tel" id="inquiry-phone" name="phone" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast">
+                </div>
+                <div>
+                    <label for="inquiry-message" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Message</label>
+                    <textarea id="inquiry-message" name="message" rows="4" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-high-contrast"></textarea>
+                </div>
+                <button type="submit" class="w-full inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-lg text-white bg-secondary hover:bg-emerald-600 transition duration-300">
+                    Send Inquiry
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Theme management
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+        
+        // Check for saved theme or prefered scheme
+        const currentTheme = localStorage.getItem('theme') || (prefersDarkScheme.matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        updateThemeIcon(currentTheme);
+
+        themeToggle.addEventListener('click', function() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        });
+
+        function updateThemeIcon(theme) {
+            if (theme === 'dark') {
+                themeIcon.setAttribute('data-lucide', 'moon');
+                lucide.createIcons();
+            } else {
+                themeIcon.setAttribute('data-lucide', 'sun');
+                lucide.createIcons();
+            }
+        }
+
+        // Scroll animations
+        function checkVisibility() {
+            const elements = document.querySelectorAll('.fade-in');
+            elements.forEach(element => {
+                const elementTop = element.getBoundingClientRect().top;
+                const elementVisible = 150;
+                
+                if (elementTop < window.innerHeight - elementVisible) {
+                    element.classList.add('visible');
+                }
+            });
+        }
+
+        window.addEventListener('scroll', checkVisibility);
+        window.addEventListener('load', checkVisibility);
+
+        // Modal control
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    modal.querySelector('div').classList.remove('scale-95');
+                    modal.querySelector('div').classList.add('scale-100');
+                }, 10);
+            } else {
+                modal.classList.add('opacity-0');
+                modal.querySelector('div').classList.remove('scale-100');
+                modal.querySelector('div').classList.add('scale-95');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            }
+        }
+
+        // Mobile menu control
+        function toggleMobileMenu() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        }
+
+        // Application form functionality
+        let currentStep = 1;
+        const totalSteps = 4;
+
+        function updateProgress() {
+            const progressFill = document.getElementById('progress-fill');
+            const stepIndicator = document.getElementById('step-indicator');
+            
+            const progressPercentage = (currentStep / totalSteps) * 100;
+            progressFill.style.width = `${progressPercentage}%`;
+            stepIndicator.textContent = `Step ${currentStep} of ${totalSteps}`;
+        }
+
+        function showStep(stepNumber) {
+            // Hide all steps
+            document.querySelectorAll('.form-step').forEach(step => {
+                step.classList.remove('active');
+            });
+            
+            // Show the current step
+            document.getElementById(`step-${stepNumber}`).classList.add('active');
+            
+            // Update current step and progress
+            currentStep = stepNumber;
+            updateProgress();
+        }
+
+        function nextStep(next) {
+            // Validate current step before proceeding
+            if (validateStep(currentStep)) {
+                showStep(next);
+            }
+        }
+
+        function prevStep(prev) {
+            showStep(prev);
+        }
+
+        function validateStep(step) {
+            // Simple validation - in a real app, you'd want more robust validation
+            const currentStepElement = document.getElementById(`step-${step}`);
+            const requiredInputs = currentStepElement.querySelectorAll('input[required], select[required], textarea[required]');
+            
+            let isValid = true;
+            requiredInputs.forEach(input => {
+                if (!input.value.trim()) {
+                    isValid = false;
+                    input.classList.add('border-red-500');
+                } else {
+                    input.classList.remove('border-red-500');
+                }
+            });
+            
+            if (!isValid) {
+                alert('Please fill in all required fields before proceeding.');
+            }
+            
+            return isValid;
+        }
+
+        // Form submission
+        document.getElementById('application-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (validateStep(currentStep)) {
+                // In a real application, you would send this data to a server
+                // For this demo, we'll just show a success message
+                
+                // Collect form data
+                const formData = new FormData(this);
+                const applicationData = {};
+                for (let [key, value] of formData.entries()) {
+                    applicationData[key] = value;
+                }
+                
+                // Simulate sending to landlord's email
+                console.log('Application submitted:', applicationData);
+                
+                // Show success message
+                alert('Thank you for your application! We will review it and contact you within 3 business days.');
+                toggleModal('application-modal');
+                
+                // Reset form
+                this.reset();
+                showStep(1);
+            }
+        });
+
+        document.getElementById('inquiry-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Thank you for your inquiry! We will get back to you soon.');
+            toggleModal('inquiry-modal');
+            this.reset();
+        });
+
+        // Initialize form
+        updateProgress();
+
+        // Initialize Map
+        function initMap() {
+            // Coordinates for Bellville South (approximate)
+            const location = [-33.9448, 18.6335];
+            
+            // Create map
+            const map = L.map('map').setView(location, 15);
+            
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            // Add marker
+            const marker = L.marker(location).addTo(map);
+            marker.bindPopup("<b>Thandolwethu Property</b><br>14 Hoffman St Lot 6<br>Bellville South, 7530").openPopup();
+            
+            // Add circle to highlight area
+            L.circle(location, {
+                color: '#3b82f6',
+                fillColor: '#3b82f6',
+                fillOpacity: 0.2,
+                radius: 300
+            }).addTo(map);
+        }
+
+        // Initialize map when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+        });
+    </script>
+</body>
+</html>
